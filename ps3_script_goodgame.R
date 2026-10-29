@@ -105,10 +105,107 @@ can_gas |>
     subtitle = "Monthly volume of gasoline sold in Canada",
     x = NULL, y = "Millions of litres"
   ) +
-  geom_smooth()
+  geom_smooth() +
   theme_minimal()
   
-  ##I added geom smooth to see an overall trend line that takes into account all the messy seasonality.
+##I added geom smooth to see an overall trend line that takes into account all the messy seasonality.
+
+##Part 3
+
+#Yes, at first the seasonal swings do grow with the level of the can_gas series. But then, in the 1990's and 2000's, as the level grows, the seasonal swings become more consistent and do not grow with the level of the series.
+  
+can_gas <- can_gas |>
+  mutate(log_volume = log(Volume))
+
+autoplot(can_gas, log_volume)
+
+#The log graph shows a sharper relative increase in the volume of gas sold from 1960-1975 than 1970-2005. I would say that logging can_gas was a good move because the seasonal swings are now a more uniform size.
+
+## 3.1c
+retail_nsa <- retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  mutate(log_sales = log(sales))
+
+retail_nsa |>
+  autoplot(sales) +
+  labs(
+    title = "U.S. Retail and Food Services Sales (NSA)",
+    subtitle = "Level",
+    x = NULL, y = "Millions of dollars"
+  ) +
+  theme_minimal()
+
+retail_nsa |>
+  autoplot(log_sales) +
+  labs(
+    title = "U.S. Retail and Food Services Sales (NSA)",
+    subtitle = "Log scale",
+    x = NULL, y = "Log of millions of dollars"
+  ) +
+  theme_minimal()
+
+##I think that there is a stronger case for logging US retail and food service sales since it removes the increasing seasonal swings that are present in the level graph. The log graph shows a more uniform seasonal pattern over time.
+
+# 3.2a
+
+can_gas <- can_gas |>
+  mutate(
+    growth_direct = 100 * difference(Volume) / lag(Volume),
+    growth_logdiff = 100 * difference(log_volume)
+  )
+
+can_gas |>
+  autoplot(growth_direct) +
+  labs(
+    title = "Canadian Gasoline Sales",
+    subtitle = "Direct growth rate",
+    x = NULL, y = "Percent"
+  ) +
+  theme_minimal()
+
+can_gas <- can_gas |> 
+  mutate( 
+    growth_gap = abs(growth_direct - growth_logdiff))
+
+can_gas |>
+  autoplot(growth_gap) +
+  labs(
+    title = "Canadian Gasoline Sales",
+    subtitle = "Absolute difference between direct and log growth rates",
+    x = NULL, y = "Percent"
+  ) +
+  theme_minimal()
+
+##Yes, I do think that the log difference of the growth rate is a good approximation for the direct growth rate. Only once are they more than 3% different, and most of the time, they're no more than 2% different. 
+
+retail_ts <- retail_ts |>
+  group_by_key() |>
+  mutate(growth_mom = 100 * difference(log(sales))) |>
+  ungroup()
+
+retail_ts |>
+  autoplot(growth_mom) +
+  labs(
+    title = "Month-over-Month Growth: SA vs. NSA Retail Sales",
+    x = NULL, y = "Growth rate (%)", color = NULL
+  ) +
+  theme_minimal()
+
+## The non-seasonally adjusted series has a lot of volatility in the growth rate, while the seasonally adjusted series is much more stable, which makes it significantly noisier. The seasonality around December and January causes large increases and decreases in the growth rate. The seasonally adjusted growth rate is much more stable.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
