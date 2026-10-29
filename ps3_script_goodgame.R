@@ -1,5 +1,7 @@
 ##Part 2
 library(tidyverse)
+library(fpp3)
+library(seasonal)   
 
 retail_raw <- read_csv("data/retail_sales_raw.csv")
 
@@ -193,11 +195,56 @@ retail_ts |>
 
 ## The non-seasonally adjusted series has a lot of volatility in the growth rate, while the seasonally adjusted series is much more stable, which makes it significantly noisier. The seasonality around December and January causes large increases and decreases in the growth rate. The seasonally adjusted growth rate is much more stable.
 
+## Part 4
+
+retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  gg_season(sales) +
+  labs(
+    title = "Seasonal Pattern in NSA Retail Sales",
+    y = "Millions of dollars"
+  ) +
+  theme_minimal()
+
+retail_ts |>
+  filter(series_id == "RSAFS") |>
+  gg_season(sales) +
+  labs(
+    title = "SA Retail Sales",
+    y = "Millions of dollars"
+  ) +
+  theme_minimal()
+
+## The seasonally adjusted data shows much more linear trends over time. Additionally, it is much easier to see the drop in sales during the covid shock.
+
+can_gas |>
+  gg_season(log_volume) +
+  labs(
+    title = "Seasonal Pattern in Canadian Gasoline Sales",
+    y = "Millions of litres"
+  ) +
+  theme_minimal()
+
+##The seasonal pattern for canada gas sales tends to be higher in the winter months and lower in the summer months. This is likely due to the fact that people have to use gas to heat their homes in the cold canadian winter months. 
+
+##4.2
+
+can_gas |>
+  gg_subseries(log_volume) +
+  labs(
+    title = "Subseries Plot: Canadian Gas Production",
+    y = "log(Volume)"
+  )
 
 
+retail_nsa_x13 <- retail_ts |>
+  filter(series_id == "RSAFSNA") |>
+  model(x13 = X_13ARIMA_SEATS(sales)) |>
+  components()
 
+retail_nsa_x13 |> autoplot()
 
-
+##The seasonal swings slowly look like they are decreasing in magnitude as we get closer to present day. It is hard to tell exactly what month has the highest seasonal factor since the X-axis is in years. 
 
 
 
