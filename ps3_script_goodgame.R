@@ -246,10 +246,63 @@ retail_nsa_x13 |> autoplot()
 
 ##The seasonal swings slowly look like they are decreasing in magnitude as we get closer to present day. It is hard to tell exactly what month has the highest seasonal factor since the X-axis is in years. 
 
+##4.3b
 
+sa_compare <- retail_nsa_x13 |>
+  as_tibble() |>
+  select(Month, mine = season_adjust) |>
+  left_join(
+    retail_ts |>
+      filter(series_id == "RSAFS") |>
+      as_tibble() |>
+      transmute(Month, census = sales),
+    by = "Month"
+  ) |>
+  mutate(pct_diff = 100 * (log(mine) - log(census)))
 
+sa_compare |>
+  ggplot(aes(x = Month, y = pct_diff)) +
+  geom_line() +
+  labs(
+    title = "My X-13 Seasonal Adjustment Minus the Census Bureau's",
+    x = NULL, y = "Difference (%)"
+  ) +
+  theme_minimal()
 
+##The difference between my X-13 seasonal adjustment and the Census Bureau's is very small with the largest differences being slightly less than 2%. The biggest differences occur within the last 10 years or so.
 
+##4.4
+
+can_gas_fit <- can_gas |>
+  model(TSLM(log_volume ~ trend() + season()))
+
+report(can_gas_fit)
+
+can_gas_fit |>
+  tidy() |>
+  select(term, estimate, std.error, statistic, p.value) |>
+  knitr::kable(digits = 3)
+
+##The estimated average monthly growth rate is 0.004 which is 0.4% growth per month. The month with the most significant seasonal effect is June at 4.77.
+
+can_gas_fit |>
+  augment() |>
+  ggplot(aes(x = Month)) +
+  geom_line(aes(y = log_volume, color = "Actual")) +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  labs(title = "Linear Trend + Seasonal Dummies Fit: Canadian Gas Production",
+       y = "log(Volume)", color = NULL) +
+  theme_minimal()
+
+##The fitted values from the linear trend + seasonal dummies model fit the actual values better in the second half of the time series. The growth in the first half is much faster than the fitted model.
+
+can_gas_fit |> gg_tsresiduals()
+
+can_gas_fit |>
+  augment() |>
+  features(.innov, ljung_box, lag = 24)
+
+##The residuals from the linear trend + seasonal dummies model are not white noise. Looking at the ACF, it is clear that there is high autocorrelation in the residuals. The Ljung-Box test also shows that the residuals are not white noise with a p-value of 0.0 and we reject the null. 
 
 
 
