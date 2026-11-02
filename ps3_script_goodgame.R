@@ -304,11 +304,44 @@ can_gas_fit |>
 
 ##The residuals from the linear trend + seasonal dummies model are not white noise. Looking at the ACF, it is clear that there is high autocorrelation in the residuals. The Ljung-Box test also shows that the residuals are not white noise with a p-value of 0.0 and we reject the null. 
 
+##Part 5
 
+gas_cv_fc <- can_gas |>
+  select(Month, Volume) |>
+  stretch_tsibble(.init = 240, .step = 1) |>
+  model(snaive = SNAIVE(Volume),
+        tslm   = TSLM(log(Volume) ~ trend() + season())) |>
+  forecast(h = 1)
 
+gas_cv_fc |>
+  accuracy(can_gas, measures = list(MAE = MAE, RMSE = RMSE))
 
+## The first evaluated forecast is for 1980 Jan and the last is for 2005 Feb. The model with the lower MAE and RMSE is the seasonal random walk model, with an MAE at 0.562 and RMSE at 0.702. The metrics do agree.
 
+errs <- gas_cv_fc |>
+  as_tibble() |>
+  left_join(as_tibble(can_gas) |> select(Month, actual = Volume),
+            by = "Month") |>
+  mutate(e = actual - .mean) |>
+  select(Month, .model, e) |>
+  pivot_wider(names_from = .model, values_from = e) |>
+  na.omit()
 
+forecast::dm.test(errs$snaive, errs$tslm, h = 1, power = 1)
+
+## The DM stat is -31.278 and the p-value is 0.00000000000000022. Based on these results, we reject the null hypothesis that the two models have equal predictive accuracy. The seasonal random walk model is significantly better than the linear trend + seasonal dummies model.
+
+gas_cv_fc <- can_gas |>
+  select(Month, Volume) |>
+  slide_tsibble(.size = 240, .step = 1) |>
+  model(snaive = SNAIVE(Volume),
+        tslm   = TSLM(log(Volume) ~ trend() + season())) |>
+  forecast(h = 1)
+
+gas_cv_fc |>
+  accuracy(can_gas, measures = list(MAE = MAE, RMSE = RMSE))
+
+##For the seasonal random walk model, its MAE is 0.562 and RMSE is 0.702. For the linear trend + seasonal dummies model, its MAE is 2.09 and its RMSE is 2.42. After switching to a rolling window, the linear trend + seasonal dummies model changed the most while the seasonal random walk model stayed the exact same. The TSLM model improved because it fits one straight trend through all the training data, and since the gas series’ growth isn’t constant, old data pulls that line away from recent behavior. Dropping old observations lets the trend fit the last 20 years.
 
 
 
